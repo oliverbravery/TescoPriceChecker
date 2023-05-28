@@ -115,5 +115,18 @@ class DatabaseAPI:
             print(f"Error getting prices from the database: {Exception}")
             return -1
 
+    def get_prices_by_tpnb(self,tpnb):
+        try:
+            connection = sqlite3.connect(self.database_name)
+            cursor = connection.cursor()
+            cursor.execute('SELECT * FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC;', (tpnb,))
+            results = cursor.fetchall()
+            json_data = json.dumps(results, indent=2)
+            connection.close()
+            return json_data
+        except Exception:
+            print(f"Error getting prices of a given item: {Exception}")
+            return -1
+
 if __name__ == '__main__':
     pass
