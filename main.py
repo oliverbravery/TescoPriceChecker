@@ -102,5 +102,18 @@ class DatabaseAPI:
             print(f"Error adding a new price: {Exception}")
             return -1
 
+    def get_prices(self):
+        try:
+            connection = sqlite3.connect(self.database_name)
+            cursor = connection.cursor()
+            cursor.execute('SELECT * FROM tblPrices;')
+            results = cursor.fetchall()
+            json_data = json.dumps(results, indent=2)
+            connection.close()
+            return json_data
+        except Exception:
+            print(f"Error getting prices from the database: {Exception}")
+            return -1
+
 if __name__ == '__main__':
     pass
