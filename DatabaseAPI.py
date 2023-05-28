@@ -15,8 +15,8 @@ class DatabaseAPI:
             connection.commit()
             connection.close()
             return 0
-        except Exception:
-            print(f"Error creating the database: {Exception}")
+        except Exception as e:
+            print(f"Error creating the database: {e}")
             return -1
 
     def get_items(self):
@@ -25,11 +25,10 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('SELECT * FROM tblItems;')
             results = cursor.fetchall()
-            json_data = json.dumps(results, indent=2)
             connection.close()
-            return json_data
-        except Exception:
-            print(f"Error getting item from database: {Exception}")
+            return results
+        except Exception as e:
+            print(f"Error getting item from database: {e}")
             return -1
 
     def add_item(self, name, tpnb):
@@ -40,7 +39,8 @@ class DatabaseAPI:
             connection.commit()
             connection.close()
             return 0
-        except Exception:
+        except Exception as e:
+            print(f"Error adding item to the database: {e}")
             return -1
 
     def check_price_difference(self, tpnb, price):
@@ -49,13 +49,13 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('SELECT price FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC LIMIT 1;', (tpnb,))
             results = cursor.fetchone()
-            if results is not None and results[0] != price:
+            if results is None or results[0] != price:
                 return True
             else:
                 return False
             connection.close()
-        except Exception:
-            print(f"Error checking the price difference: {Exception}")
+        except Exception as e:
+            print(f"Error checking the price difference: {e}")
             return -1
 
     def add_price(self, tpnb, price):
@@ -68,8 +68,8 @@ class DatabaseAPI:
                 connection.commit()
                 connection.close()
                 return 0
-        except Exception:
-            print(f"Error adding a new price: {Exception}")
+        except Exception as e:
+            print(f"Error adding a new price: {e}")
             return -1
 
     def get_prices(self):
@@ -78,11 +78,10 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('SELECT * FROM tblPrices;')
             results = cursor.fetchall()
-            json_data = json.dumps(results, indent=2)
             connection.close()
-            return json_data
-        except Exception:
-            print(f"Error getting prices from the database: {Exception}")
+            return results
+        except Exception as e:
+            print(f"Error getting prices from the database: {e}")
             return -1
 
     def get_prices_by_tpnb(self,tpnb):
@@ -91,9 +90,20 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('SELECT * FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC;', (tpnb,))
             results = cursor.fetchall()
-            json_data = json.dumps(results, indent=2)
             connection.close()
-            return json_data
-        except Exception:
-            print(f"Error getting prices of a given item: {Exception}")
+            return results
+        except Exception as e:
+            print(f"Error getting prices of a given item: {e}")
+            return -1
+
+    def get_item_by_tpnb(self,tpnb):
+        try:
+            connection = sqlite3.connect(self.database_name)
+            cursor = connection.cursor()
+            cursor.execute('SELECT * FROM tblItems WHERE tpnb = ?;', (tpnb,))
+            results = cursor.fetchall()
+            connection.close()
+            return results
+        except Exception as e:
+            print(f"Error getting item by tpnb '{tpnb}': {e}")
             return -1

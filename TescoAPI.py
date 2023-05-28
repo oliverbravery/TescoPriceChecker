@@ -26,6 +26,6 @@ class TescoAPI:
         try:
             response = requests.request("POST", url, headers=headers, data=payload)
             return response.json()
-        except Exception:
-            print(f"Error getting item details from the Tesco API: {Exception}")
+        except Exception as e:
+            print(f"Error getting item details from the Tesco API: {e}")
             return -1
