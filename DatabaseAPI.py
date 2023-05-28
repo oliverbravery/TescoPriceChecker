@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 
 class DatabaseAPI:
     database_name = 'Tesco_Prices.db'
