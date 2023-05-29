@@ -4,14 +4,17 @@ import json
 
 class DatabaseAPI:
     database_name = 'Tesco_Prices.db'
+
     def create_database(self):
         try:
             if os.path.exists(self.database_name):
                 return 0
             connection = sqlite3.connect(self.database_name)
-            connection.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT);')
-            connection.execute(
-                'CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
+            cursor = connection.cursor()
+            cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT);')
+            connection.commit()
+            cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, '
+                           'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
             connection.commit()
             connection.close()
             return 0
