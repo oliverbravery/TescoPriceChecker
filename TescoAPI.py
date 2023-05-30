@@ -52,7 +52,7 @@ class TescoAPI:
                     elif promotion_deal_text[0] == "£":
                         #is pounds
                         pound_price = promotion_deal_text.split(" ")[0]
-                        pound_price.replace("£", "")
+                        pound_price = pound_price.replace("£", "")
                         promotional_price = float(pound_price)
                     return {"promotion_deal_text": promotion_deal_text, "promotion_start_date": promotion_start_date, "promotion_end_date": promotion_end_date, "promotional_price": promotional_price}
         return {"promotion_deal_text": None, "promotion_start_date": None, "promotion_end_date": None, "promotional_price": None}

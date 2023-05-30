@@ -47,21 +47,24 @@ def notify_of_price_change(item_tpnb):
     if prior_item_price == -1 and new_item_price == -1:
         logger("There was an error notifying the user of the price change.")
     elif prior_item_price != -1 and new_item_price != -1:
-        send_discord_message(message=f"'{item_name}' is now £{format_number_as_currency(new_item_price)}!")
+        send_discord_message(message=f"'{item_name}' is now £{format_number_as_currency(new_item_price)}! Clubcard deal: {item_prices[0][3]}")
 
 def update_tesco_price(item_tpnb):
     logger(f"Checking price for tesco item (tpnb: {item_tpnb})")
     tesco_item_data = TescoAPI.get_item_details(item_tpnb)
     if tesco_item_data != -1:
         try:
+            clubcard_deal_json = TescoAPI.get_item_clubcard_details(tesco_item_data)
             tesco_item_price = tesco_item_data["data"]["product"]["price"]["price"]
+            if clubcard_deal_json["promotional_price"] != None and clubcard_deal_json["promotional_price"] < tesco_item_price:
+                tesco_item_price = clubcard_deal_json["promotional_price"]
             stored_prices = DatabaseAPI().get_prices_by_tpnb(item_tpnb)
             if not stored_prices:
                 most_recent_price = -1
             else:
                 most_recent_price = stored_prices[0][2]
             if most_recent_price != tesco_item_price:
-                DatabaseAPI().add_price(item_tpnb, tesco_item_price)
+                DatabaseAPI().add_price(item_tpnb, tesco_item_price, f"{clubcard_deal_json['promotion_deal_text']}")
                 logger(f"Successfully updated price for tesco item (tpnb: {item_tpnb})" +
                         f"to £{format_number_as_currency(tesco_item_price)}.")
                 notify_of_price_change(item_tpnb)
