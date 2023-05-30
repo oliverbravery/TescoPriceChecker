@@ -17,7 +17,7 @@ class DatabaseAPI:
             cursor.execute('CREATE TABLE tblItemSubscriptions (subscriber TEXT, tpnb INTEGER, PRIMARY KEY(subscriber, tpnb), '
                            'FOREIGN KEY(tpnb) REFERENCES tblItems(tpnb), FOREIGN KEY(subscriber) REFERENCES tblSubscribers (subscriber));')
             connection.commit()
-            cursor.execute('CREATE TABLE tblSubscribers (subscriber TEXT PRIMARY KEY);')
+            cursor.execute('CREATE TABLE tblSubscribers (subscriber TEXT PRIMARY KEY, last_viewed DATETIME);')
             connection.commit()
             cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
@@ -132,12 +132,15 @@ class DatabaseAPI:
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
             cursor.execute('SELECT subscriber FROM tblSubscribers;')
-            results = cursor.fetchone()
+            results = cursor.fetchall()
             connection.close()
             if results is None:
                 return []
             else:
-                return results
+                new_results = []
+                for x in results:
+                    new_results.append(x[0])
+                return new_results
         except Exception as e:
             logger(f"Error getting subscribers from the database: {e}")
             return -1
@@ -158,4 +161,30 @@ class DatabaseAPI:
                 return first_results
         except Exception as e:
             logger(f"Error getting subscribers from the database: {e}")
+            return -1
+        
+    def update_subscribers_last_viewed(self, subscriber):
+        try:
+            self.perform_no_response_query(f"UPDATE tblSubscribers SET last_viewed=CURRENT_TIMESTAMP WHERE subscriber={str(subscriber.id)};")
+            return 0
+        except Exception as e:
+            logger(f"Error updating last viewed for subscriber {subscriber.id}: {e}")
+            return -1
+        
+    def get_unviewed_item_changes(self,subscriber):
+        try:
+            connection = sqlite3.connect(self.database_name)
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT i.tpnb FROM tblItemSubscriptions i, tblSubscribers s, tblPrices p WHERE s.subscriber=i.subscriber AND p.tpnb=i.tpnb AND s.last_viewed < p.date_changed AND s.subscriber={subscriber.id};")
+            results = cursor.fetchall()
+            connection.close()
+            if results is None:
+                return []
+            else:
+                new_results = []
+                for r in results:
+                    new_results.append(r[0])
+                return new_results
+        except Exception as e:
+            logger(f"Error getting unviewed items for {subscriber.id} from the database: {e}")
             return -1
