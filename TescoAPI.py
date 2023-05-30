@@ -33,6 +33,29 @@ class TescoAPI:
         except Exception as e:
             print(f"Error getting item details from the Tesco API: {e}")
             return -1
+        
+    def get_item_clubcard_details(item_details):
+        promotions_infomation = item_details["data"]["product"]["promotions"]
+        for promotion in promotions_infomation:
+            attributes = promotion["attributes"]
+            for attribute in attributes:
+                if attribute == "CLUBCARD_PRICING":
+                    promotion_deal_text = promotion["offerText"]
+                    promotion_start_date = promotion["startDate"]
+                    promotion_end_date = promotion["endDate"]
+                    promotional_price = None
+                    # if statment to check if promotion_deal_text starts with two numbers followed by p or one number followed by p
+                    if (promotion_deal_text[0].isdigit() and promotion_deal_text[1] == "p") or (promotion_deal_text[0].isdigit() and  promotion_deal_text[1].isdigit() and promotion_deal_text[2] == "p"):
+                        pennie_price = promotion_deal_text.split("p")[0]
+                        # convert the pennie amount to pounds
+                        promotional_price = float(pennie_price) / 100
+                    elif promotion_deal_text[0] == "£":
+                        #is pounds
+                        pound_price = promotion_deal_text.split(" ")[0]
+                        pound_price.replace("£", "")
+                        promotional_price = float(pound_price)
+                    return {"promotion_deal_text": promotion_deal_text, "promotion_start_date": promotion_start_date, "promotion_end_date": promotion_end_date, "promotional_price": promotional_price}
+        return {"promotion_deal_text": None, "promotion_start_date": None, "promotion_end_date": None, "promotional_price": None}
 
     def find_tpnb_from_product_page(url):
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36', "Upgrade-Insecure-Requests": "1","DNT": "1","Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language": "en-US,en;q=0.5","Accept-Encoding": "gzip, deflate"}
