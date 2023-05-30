@@ -105,6 +105,9 @@ async def on_message(message):
         else:
             response = f"@{message.author}, there was an error adding that item to the watchlist."
         await message.channel.send(response)
+    if "check" in message.content:
+        response = ""
+        await message.channel.send(response)
 
 def add_item_by_link(link, sender):
     try:

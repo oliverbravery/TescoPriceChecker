@@ -11,7 +11,10 @@ class DatabaseAPI:
                 return 0
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
-            cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT, subscriber TEXT);')
+            cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT);')
+            connection.commit()
+            cursor.execute('CREATE TABLE tblItemSubscriptions (user TEXT, tpnb INTEGER, PRIMARY KEY(user, tpnb), '
+                           'FOREIGN KEY(tpnb) REFERENCES tblItems(tpnb));')
             connection.commit()
             cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
@@ -38,7 +41,9 @@ class DatabaseAPI:
         try:
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
-            cursor.execute('INSERT INTO tblItems (tpnb, name, subscriber) VALUES (?, ?, ?);', (int(tpnb), str(name), str(subscriber)))
+            cursor.execute('INSERT INTO tblItems (tpnb, name) VALUES (?, ?);', (int(tpnb), str(name)))
+            connection.commit()
+            cursor.execute('INSERT INTO tblItemSubscriptions (user, tpnb) VALUES (?, ?);', (str(subscriber), int(tpnb)))
             connection.commit()
             connection.close()
             return 0
@@ -52,11 +57,11 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('SELECT price FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC LIMIT 1;', (tpnb,))
             results = cursor.fetchone()
+            connection.close()
             if results is None or results[0] != price:
                 return True
             else:
                 return False
-            connection.close()
         except Exception as e:
             print(f"Error checking the price difference: {e}")
             return -1
