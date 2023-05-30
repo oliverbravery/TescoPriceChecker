@@ -2,9 +2,13 @@ import requests
 import json
 import os
 from dotenv import load_dotenv
+import requests
+import json
+from bs4 import BeautifulSoup
 
 load_dotenv()
 tesco_api_key = os.getenv("tesco_api_key")
+new_item_retry_count=os.getenv("new_item_retry_count")
 
 class TescoAPI:
     '''
@@ -29,3 +33,24 @@ class TescoAPI:
         except Exception as e:
             print(f"Error getting item details from the Tesco API: {e}")
             return -1
+
+    def find_tpnb_from_product_page(url):
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36', "Upgrade-Insecure-Requests": "1","DNT": "1","Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language": "en-US,en;q=0.5","Accept-Encoding": "gzip, deflate"}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.content, "html.parser")
+        tag = soup.find_all("meta", {"http-equiv": "refresh"})[0]
+        attribute = tag.attrs
+        end_url = attribute["content"].split("=")[-1][0:-1]
+        new_url=url+"?bm-verify="+end_url
+        for x in range(int(new_item_retry_count)):
+            print(f"Attempt: {x}")
+            response = requests.get(new_url, headers=headers)
+            soup = BeautifulSoup(response.content, "html.parser")
+            tag = soup.find_all("body")[0]
+            attribute = tag.attrs
+            try:
+                json_data = json.loads(attribute["data-redux-state"])
+                tpnb = json_data["productDetails"]["product"]["baseProductId"]
+                return tpnb
+            except:
+                pass
