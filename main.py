@@ -46,21 +46,6 @@ def get_item_price_update_message(item_tpnb):
         message += f" \n - was previously priced at £{item_prices[1][2]}"
     return message
 
-def notify_of_price_change(item_tpnb):
-    item_name = DatabaseAPI().get_item_by_tpnb(item_tpnb)[0][1]
-    item_prices = DatabaseAPI().get_prices_by_tpnb(item_tpnb)
-    prior_item_price = -1
-    new_item_price = -1
-    if len(item_prices) >= 2:
-        prior_item_price = item_prices[1][2]
-        new_item_price = item_prices[0][2]
-    elif len(item_prices) > 0:
-        new_item_price = item_prices[0][2]
-    if prior_item_price == -1 and new_item_price == -1:
-        logger("There was an error notifying the user of the price change.")
-    elif prior_item_price != -1 and new_item_price != -1:
-        send_discord_message(message=f"'{item_name}' is now £{format_number_as_currency(new_item_price)}! Clubcard deal: {item_prices[0][3]}")
-
 def update_tesco_price(item_tpnb):
     logger(f"Checking price for tesco item (tpnb: {item_tpnb})")
     tesco_item_data = TescoAPI.get_item_details(item_tpnb)
