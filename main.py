@@ -83,16 +83,13 @@ def update_all_item_prices():
         return updated_tpnbs
     return -1
 
-def format_subscriber_update_message(subscriber, updated_items):
+def format_subscriber_update_message(subscriber):
     message = f"# {subscriber.name} price updates\n"
     message += f"Hello {subscriber.mention}, here are the price updates for your items (only showing updated prices):\n"
     item_added_to_message = False
-    for item in updated_items:
-        item_tpnb = item[0]
-        price_update_status = item[1]
-        if price_update_status == True:
-            item_added_to_message = True
-            message += f"{get_item_price_update_message(item_tpnb)} \n"
+    for item_tpnb in DatabaseAPI().get_unviewed_item_changes(subscriber):
+        item_added_to_message = True
+        message += f"{get_item_price_update_message(item_tpnb)} \n"
     if not item_added_to_message:
         message += "- *No items found :neutral_face:*" 
     return message
@@ -105,19 +102,21 @@ def update_subscribers_item_prices(subscriber):
     for item in subscribers_items:
         item_tpnb = item
         price_update_status = update_tesco_price(item_tpnb)
-        updated_items.append([item_tpnb, price_update_status])
-    return format_subscriber_update_message(subscriber, updated_items)
+    formatted_message = format_subscriber_update_message(subscriber)
+    DatabaseAPI().update_subscribers_last_viewed(subscriber)
+    return formatted_message
 
-def send_updates_to_subscribers(updated_tpnbs):
+async def send_updates_to_subscribers():
     subscribers = DatabaseAPI().get_subscribers()
     if subscribers != -1:
         for subscriber in subscribers:
-            subscriber = client.get_user(subscriber)
+            subscriber = await client.fetch_user(subscriber)
             if subscriber != None:
                 subscribers_items = DatabaseAPI().get_items_by_subscriber(subscriber) 
                 if subscribers_items != -1:
-                    subscribers_updated_tpnbs = np.array([item for item in updated_tpnbs if item[0] in subscribers_items])
-                    send_discord_message(format_subscriber_update_message(subscriber, subscribers_updated_tpnbs))
+                    formatted_message = format_subscriber_update_message(subscriber)
+                    DatabaseAPI().update_subscribers_last_viewed(subscriber)
+                    send_discord_message(formatted_message)
         
 
 @client.event
@@ -131,7 +130,7 @@ async def price_periodic_checker():
         logger(f"Checking tesco prices...")
         updated_tpnbs = update_all_item_prices()
         if updated_tpnbs != -1:
-            send_updates_to_subscribers(updated_tpnbs)
+            await send_updates_to_subscribers()
         logger(f"Finished checking tesco prices.")
         await asyncio.sleep(int(price_check_rate))
 
