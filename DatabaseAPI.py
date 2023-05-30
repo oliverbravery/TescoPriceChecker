@@ -188,3 +188,21 @@ class DatabaseAPI:
         except Exception as e:
             logger(f"Error getting unviewed items for {subscriber.id} from the database: {e}")
             return -1
+    
+    def remove_item_from_subscription(self, tpnb, subscriber):
+        return_state = self.perform_no_response_query(f"DELETE FROM tblItemSubscriptions WHERE tpnb={tpnb} AND subscriber={str(subscriber.id)};")
+        logger(f"{subscriber.id} removed item {tpnb} from their subscription list. Return state: {return_state}")
+        if return_state == 0:
+            try:
+                connection = sqlite3.connect(self.database_name)
+                cursor = connection.cursor()
+                cursor.execute(f"SELECT * FROM tblItemSubscriptions WHERE tpnb={tpnb};")
+                results = cursor.fetchall()
+                connection.close()
+                if results is not None:
+                    if results == []:
+                        self.perform_no_response_query(f"DELETE FROM tblItems WHERE tpnb={tpnb};")
+                        logger(f"Removed item {tpnb} from the database as it is no longer subscribed to.")
+            except Exception as e:
+                logger(f"Error in remove_item_from_subscription: {e}")
+        return return_state
