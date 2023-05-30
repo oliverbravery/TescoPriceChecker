@@ -136,9 +136,34 @@ def send_subscribed_item_list(subscriber):
     else:
         message += f" \n{subscriber.mention}, failed to get your subscribed items."
     return message
-                
+
+def get_subscribers_items_as_options(subscriber):
+    options = []
+    tpnbs = DatabaseAPI().get_items_by_subscriber(subscriber)
+    if tpnbs != -1:
+        for tpnb in tpnbs:
+            item = DatabaseAPI().get_item_by_tpnb(tpnb)
+            if item != -1 and len(item) > 0:
+                item = item[0][1]
+                options.append(discord.SelectOption(label=str(item), value=str(tpnb)))
+    return options
         
-        
+class Dropdown(discord.ui.Select):
+    def __init__(self, placeholder, options):
+        super().__init__(placeholder=placeholder, min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if DatabaseAPI().remove_item_from_subscription(self.values[0], interaction.user) != -1:
+            await interaction.response.send_message(f'The item has been removed from your subscription list. This dropdown will now be disabled.')
+            self.view.stop()
+            self.disabled = True
+        else:
+            await interaction.response.send_message(f'Failed to remove the item from your subscription list.')
+
+class DropdownView(discord.ui.View):
+    def __init__(self, placeholder, options):
+        super().__init__()
+        self.add_item(Dropdown(placeholder, options))
 
 @client.event
 async def on_ready():
@@ -173,6 +198,15 @@ async def on_message(message):
     elif "list" in message.content:
         response = send_subscribed_item_list(message.author)
         await message.channel.send(response)
+    elif "remove" in message.content:
+        placeholder='Choose your favourite colour...'
+        options=get_subscribers_items_as_options(message.author)
+        if options != []:
+            view = DropdownView(placeholder, options)
+            response = f"{message.author.mention}, here are your subscribed items:"
+            await message.channel.send(response, view=view)
+        else:
+            await message.channel.send("You have no subscribed items.")
     
 
 def add_item_by_link(link, sender):
