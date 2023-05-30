@@ -182,7 +182,7 @@ async def price_periodic_checker():
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == client.user or message.author.bot == True:
         return
     if "check" in message.content:
         response = update_subscribers_item_prices(message.author)
