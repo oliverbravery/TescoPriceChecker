@@ -11,7 +11,7 @@ class DatabaseAPI:
                 return 0
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
-            cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT);')
+            cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT, subscriber TEXT);')
             connection.commit()
             cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
@@ -34,11 +34,11 @@ class DatabaseAPI:
             print(f"Error getting item from database: {e}")
             return -1
 
-    def add_item(self, name, tpnb):
+    def add_item(self, name, tpnb, subscriber):
         try:
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
-            cursor.execute('INSERT INTO tblItems (name, tpnb) VALUES (?, ?);', (name, tpnb))
+            cursor.execute('INSERT INTO tblItems (tpnb, name, subscriber) VALUES (?, ?, ?);', (int(tpnb), str(name), str(subscriber)))
             connection.commit()
             connection.close()
             return 0
