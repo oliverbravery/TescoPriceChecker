@@ -13,8 +13,10 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT);')
             connection.commit()
-            cursor.execute('CREATE TABLE tblItemSubscriptions (user TEXT, tpnb INTEGER, PRIMARY KEY(user, tpnb), '
-                           'FOREIGN KEY(tpnb) REFERENCES tblItems(tpnb));')
+            cursor.execute('CREATE TABLE tblItemSubscriptions (subscriber TEXT, tpnb INTEGER, PRIMARY KEY(subscriber, tpnb), '
+                           'FOREIGN KEY(tpnb) REFERENCES tblItems(tpnb), FOREIGN KEY(subscriber) REFERENCES tblSubscribers (subscriber));')
+            connection.commit()
+            cursor.execute('CREATE TABLE tblSubscribers (subscriber TEXT PRIMARY KEY);')
             connection.commit()
             cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
@@ -41,9 +43,11 @@ class DatabaseAPI:
         try:
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
+            cursor.execute('INSERT INTO tblSubscribers (subscriber) VALUES (?);', (str(subscriber),))
+            connection.commit()
             cursor.execute('INSERT INTO tblItems (tpnb, name) VALUES (?, ?);', (int(tpnb), str(name)))
             connection.commit()
-            cursor.execute('INSERT INTO tblItemSubscriptions (user, tpnb) VALUES (?, ?);', (str(subscriber), int(tpnb)))
+            cursor.execute('INSERT INTO tblItemSubscriptions (subscriber, tpnb) VALUES (?, ?);', (str(subscriber), int(tpnb)))
             connection.commit()
             connection.close()
             return 0
@@ -115,3 +119,9 @@ class DatabaseAPI:
         except Exception as e:
             print(f"Error getting item by tpnb '{tpnb}': {e}")
             return -1
+        
+    def get_subscribers():
+        pass
+
+    def get_items_by_subscriber(subscriber):
+        pass
