@@ -117,6 +117,27 @@ async def send_updates_to_subscribers():
                     formatted_message = format_subscriber_update_message(subscriber)
                     DatabaseAPI().update_subscribers_last_viewed(subscriber)
                     send_discord_message(formatted_message)
+
+def send_subscribed_item_list(subscriber):
+    message = f"# {subscriber.name} subscribed items"
+    items = DatabaseAPI().get_items_by_subscriber(subscriber)
+    if items != -1:
+        message += f" \n{subscriber.mention}, here are your subscribed items:"
+        for tpnb in items:
+            item = DatabaseAPI().get_item_by_tpnb(tpnb)
+            if item != -1 and len(item) > 0:
+                message += f" \n- {item[0][1]}"
+                prices = DatabaseAPI().get_prices_by_tpnb(tpnb)
+                if prices != -1 and len(prices) > 0:
+                    message += f" \n - price: {prices[0][2]}"
+                    message += f" \n - clubcard deal: {prices[0][3]}"
+        if items == []:
+            message += f" \n- *No items found :neutral_face:*"
+    else:
+        message += f" \n{subscriber.mention}, failed to get your subscribed items."
+    return message
+                
+        
         
 
 @client.event
@@ -138,7 +159,10 @@ async def price_periodic_checker():
 async def on_message(message):
     if message.author == client.user:
         return
-    if "www.tesco.com" in message.content:
+    if "check" in message.content:
+        response = update_subscribers_item_prices(message.author)
+        await message.channel.send(response)
+    elif "www.tesco.com" in message.content:
         response = ""
         added_item_response = add_item_by_link(link=message.content, sender=message.author)
         if added_item_response != -1:
@@ -146,9 +170,10 @@ async def on_message(message):
         else:
             response = f"{message.author.mention}, there was an error adding that item to the watchlist."
         await message.channel.send(response)
-    if "check" in message.content:
-        response = update_subscribers_item_prices(message.author)
+    elif "list" in message.content:
+        response = send_subscribed_item_list(message.author)
         await message.channel.send(response)
+    
 
 def add_item_by_link(link, sender):
     try:
