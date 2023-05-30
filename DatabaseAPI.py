@@ -13,7 +13,7 @@ class DatabaseAPI:
             cursor = connection.cursor()
             cursor.execute('CREATE TABLE tblItems (tpnb INTEGER PRIMARY KEY, name TEXT, subscriber TEXT);')
             connection.commit()
-            cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, '
+            cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
             connection.commit()
             connection.close()
@@ -61,13 +61,13 @@ class DatabaseAPI:
             print(f"Error checking the price difference: {e}")
             return -1
 
-    def add_price(self, tpnb, price):
+    def add_price(self, tpnb, price, promotion_message):
         try:
             if self.check_price_difference(tpnb, price):
                 connection = sqlite3.connect(self.database_name)
                 cursor = connection.cursor()
-                cursor.execute('INSERT INTO tblPrices (tpnb, price, date_changed) VALUES (?, ?, CURRENT_TIMESTAMP);',
-                               (tpnb, price))
+                cursor.execute('INSERT INTO tblPrices (tpnb, price, date_changed, promotion_message) VALUES (?, ?, CURRENT_TIMESTAMP, ?);',
+                               (tpnb, price, promotion_message))
                 connection.commit()
                 connection.close()
                 return 0
