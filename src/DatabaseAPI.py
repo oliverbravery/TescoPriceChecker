@@ -21,7 +21,7 @@ class DatabaseAPI:
             connection.commit()
             cursor.execute('CREATE TABLE tblSubscribers (subscriber TEXT PRIMARY KEY, last_viewed DATETIME);')
             connection.commit()
-            cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, '
+            cursor.execute('CREATE TABLE tblPrices (tpnb INTEGER, date_changed DATETIME, price DOUBLE, promotion_message TEXT, clubcard_price DOUBLE, '
                            'FOREIGN KEY (tpnb) REFERENCES tblItems (tpnb));')
             connection.commit()
             connection.close()
@@ -64,28 +64,33 @@ class DatabaseAPI:
             logger(f"Error adding item to the database: {e}")
             return -1
 
-    def check_price_difference(self, tpnb, price):
+    def check_item_differences(self, tpnb, price, clubcard_price, promotion_message):
         try:
             connection = sqlite3.connect(self.database_name)
             cursor = connection.cursor()
-            cursor.execute('SELECT price FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC LIMIT 1;', (tpnb,))
+            cursor.execute('SELECT price, clubcard_price, promotion_message FROM tblPrices WHERE tpnb = ? ORDER BY date_changed DESC LIMIT 1;', (tpnb,))
             results = cursor.fetchone()
             connection.close()
-            if results is None or results[0] != price:
+            if results is None:
                 return True
+            elif float(results[0][0]) != price or str(results[0][2]) != promotion_message:
+                return True 
             else:
+                if results[0][1] is not None:
+                    if float(results[0][1]) != clubcard_price:
+                        return True
                 return False
         except Exception as e:
             logger(f"Error checking the price difference: {e}")
             return -1
 
-    def add_price(self, tpnb, price, promotion_message):
+    def add_price(self, tpnb, price, promotion_message, clubcard_price):
         try:
-            if self.check_price_difference(tpnb, price):
+            if self.check_item_differences(tpnb, price, clubcard_price, promotion_message):
                 connection = sqlite3.connect(self.database_name)
                 cursor = connection.cursor()
-                cursor.execute('INSERT INTO tblPrices (tpnb, price, date_changed, promotion_message) VALUES (?, ?, CURRENT_TIMESTAMP, ?);',
-                               (tpnb, price, promotion_message))
+                cursor.execute('INSERT INTO tblPrices (tpnb, price, date_changed, promotion_message, clubcard_price) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?);',
+                               (tpnb, price, promotion_message, clubcard_price))
                 connection.commit()
                 connection.close()
                 return 0

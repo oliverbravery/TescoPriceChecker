@@ -35,15 +35,53 @@ def send_discord_message(message):
                          avatar_url="https://www.cantechonline.com/wp-content/uploads/Tesco-Logo.jpg")
     logger("Successfully sent discord message.")
 
+def get_what_price_part_changed(item_prices):
+    # [standard_price_change, clubcard_price_change, clubcard_msg_change]
+    changes = {"spc": False, "cpc": False, "cmc": False}
+    if len(item_prices) == 0:
+        return []
+    elif len(item_prices) == 1:
+        return {"spc": True, "cpc": True, "cmc": True}
+    elif len(item_prices) >= 2:
+        most_recent_price = item_prices[0]
+        second_most_recent_price = item_prices[1]
+        if most_recent_price[4] is not None and second_most_recent_price[4] is not None:
+            if float(most_recent_price[4]) != float(second_most_recent_price[4]):
+                changes["cpc"] = True
+        if most_recent_price[3] is not None and second_most_recent_price[3] is not None:
+            if most_recent_price[3] != second_most_recent_price[3]:
+                changes["cmc"] = True
+        if float(most_recent_price[2]) != float(second_most_recent_price[2]):
+            changes["spc"] = True
+    return changes
+
+def get_update_status_message(item_price_status):
+    if(item_price_status):
+        return "(`changed`) "
+    else:
+        return ""
+
 def get_item_price_update_message(item_tpnb):
     message = -1
     item_name = DatabaseAPI().get_item_by_tpnb(item_tpnb)[0][1]
     item_prices = DatabaseAPI().get_prices_by_tpnb(item_tpnb)
+    price_change_status = get_what_price_part_changed(item_prices)
     message = f"### {item_name} \n "
     if len(item_prices) > 0:
-        message += f"- now £{item_prices[0][2]}! \n - clubcard offer: {item_prices[0][3]}"
-    if len(item_prices) >= 2:
-        message += f" \n - was previously priced at £{item_prices[1][2]}"
+        clubcard_is_best_price = False
+        clubcard_price = item_prices[0][4]
+        if clubcard_price != None:
+            clubcard_price = float(clubcard_price)
+            if clubcard_price < float(item_prices[0][2]):
+                clubcard_is_best_price = True
+        if clubcard_is_best_price:
+            message += f"- {get_update_status_message(price_change_status['cpc'])}best price £{clubcard_price}! (*Clubcard Price*) \n "
+            message += f"- {get_update_status_message(price_change_status['spc'])}price normally £{item_prices[0][2]} \n "
+        else:
+            message += f"- {get_update_status_message(price_change_status['spc'])}best price £{item_prices[0][2]}! (*Standard*) \n "
+            if clubcard_price != None:
+                message += f"- {get_update_status_message(price_change_status['cpc'])}clubcard price is £{clubcard_price} \n " 
+        message += f"- {get_update_status_message(price_change_status['cmc'])}clubcard offer: {item_prices[0][3]}"
     return message
 
 def update_tesco_price(item_tpnb):
@@ -53,15 +91,17 @@ def update_tesco_price(item_tpnb):
         try:
             clubcard_deal_json = TescoAPI.get_item_clubcard_details(tesco_item_data)
             tesco_item_price = tesco_item_data["data"]["product"]["price"]["price"]
-            if clubcard_deal_json["promotional_price"] != None and clubcard_deal_json["promotional_price"] < tesco_item_price:
-                tesco_item_price = clubcard_deal_json["promotional_price"]
+            tesco_clubcard_price = clubcard_deal_json["promotional_price"]
+            tesco_clubcard_message = str(clubcard_deal_json['promotion_deal_text'])
             stored_prices = DatabaseAPI().get_prices_by_tpnb(item_tpnb)
             if not stored_prices:
                 most_recent_price = -1
             else:
                 most_recent_price = stored_prices[0][2]
-            if most_recent_price != tesco_item_price:
-                DatabaseAPI().add_price(item_tpnb, tesco_item_price, f"{clubcard_deal_json['promotion_deal_text']}")
+                most_recent_clubcard_price = stored_prices[0][4]
+                most_recent_clubcard_message = stored_prices[0][3]
+            if most_recent_price != tesco_item_price or most_recent_clubcard_price != tesco_clubcard_price or most_recent_clubcard_message != tesco_clubcard_message:
+                DatabaseAPI().add_price(item_tpnb, tesco_item_price, f"{clubcard_deal_json['promotion_deal_text']}", tesco_clubcard_price)
                 logger(f"Successfully updated price for tesco item (tpnb: {item_tpnb})" +
                         f"to £{format_number_as_currency(tesco_item_price)}.")
                 return True
@@ -84,8 +124,8 @@ def update_all_item_prices():
     return -1
 
 def format_subscriber_update_message(subscriber):
-    message = f"# {subscriber.name} price updates\n"
-    message += f"Hello {subscriber.mention}, here are the price updates for your items (only showing updated prices):\n"
+    message = f"# {subscriber.name} item updates\n"
+    message += f"Hello {subscriber.mention}, here are the price updates for your items (only showing updated items):\n"
     item_added_to_message = False
     for item_tpnb in DatabaseAPI().get_unviewed_item_changes(subscriber):
         item_added_to_message = True
@@ -129,7 +169,11 @@ def send_subscribed_item_list(subscriber):
                 message += f" \n- {item[0][1]}"
                 prices = DatabaseAPI().get_prices_by_tpnb(tpnb)
                 if prices != -1 and len(prices) > 0:
-                    message += f" \n - price: {prices[0][2]}"
+                    message += f" \n - price: £{prices[0][2]}"
+                    if prices[0][4] is not None:
+                        message += f" \n - clubcard price: £{prices[0][4]}"
+                    else:
+                        message += f" \n - clubcard price: {prices[0][4]}"
                     message += f" \n - clubcard deal: {prices[0][3]}"
         if items == []:
             message += f" \n- *No items found :neutral_face:*"
@@ -199,7 +243,7 @@ async def on_message(message):
         response = send_subscribed_item_list(message.author)
         await message.channel.send(response)
     elif "remove" in message.content:
-        placeholder='Choose your favourite colour...'
+        placeholder='Choose an item to remove...'
         options=get_subscribers_items_as_options(message.author)
         if options != []:
             view = DropdownView(placeholder, options)
