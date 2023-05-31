@@ -4,7 +4,9 @@ import json
 from utils import logger
 
 class DatabaseAPI:
-    database_name = 'Tesco_Prices.db'
+
+    def __init__(self):
+        self.database_name = os.path.join(os.path.dirname(__file__), 'database/Tesco_Prices.db')
 
     def create_database(self):
         try:
@@ -49,7 +51,7 @@ class DatabaseAPI:
             connection.close()
             return 0
         except Exception as e:
-            logger(f"Error performing query: {e}")
+            logger(f"Error performing query: {e}. query string: '{query}'")
             return -1
 
     def add_item(self, name, tpnb, subscriber):
